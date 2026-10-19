@@ -8,6 +8,10 @@ nothing in it that cannot be shipped.
 
 <img src="screens.png" width="584" alt="Both screens: the Edge meter on the top screen, the file browser on the bottom">
 
+### Watch it running
+
+[<img src="https://img.youtube.com/vi/sYCfoZrhdlQ/maxresdefault.jpg" width="584" alt="I turned a Nintendo DS into an MP3 player — video">](https://www.youtube.com/watch?v=sYCfoZrhdlQ)
+
 
 ## Licence
 
