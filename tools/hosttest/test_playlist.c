@@ -17,6 +17,7 @@
 #define NAME_MAX 255
 #endif
 
+#include "storage.c"
 #include "filebrowser.c"
 
 

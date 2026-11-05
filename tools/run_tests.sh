@@ -77,6 +77,8 @@ $CC -O1 -g -w -I"${WORK}/stub" -I"$SRC" "${WORK}/test_browser.c" "${SRC}/textfol
 # shims rename() to reach the fallback that only FatFs ever takes.
 $CC -O1 -g -w -I"${WORK}/stub" -I"$SRC" "${WORK}/test_cardwrite.c" -o test_cardwrite
 $CC -O1 -g -w -I. -I"${WORK}/stub" -I"$SRC" "${WORK}/test_order.c" "${SRC}/textfold.c" -lm -o test_order
+$CC -O1 -g -Wall -I"${WORK}/stub" -I"$SRC" "${WORK}/test_launch.c" "${SRC}/launch.c" -o test_launch
+$CC -O1 -g -Wall -I"${WORK}/stub" -I"$SRC" "${WORK}/test_storage.c" -o test_storage
 $CC -O1 -g -w -I"${WORK}/stub" -I"$SRC" \
     -DDSXP_DIR="\"${BUILD}/playlist_root/dsxp_info\"" \
     "${WORK}/test_playlist.c" "${SRC}/textfold.c" "${SRC}/cardwrite.c" -o test_playlist
@@ -103,6 +105,12 @@ rm -rf "${BUILD}/browser_root"
 
 echo
 ./test_order || status=1
+
+echo
+./test_launch || status=1
+
+echo
+./test_storage || status=1
 
 echo
 rm -rf "${BUILD}/cardwrite_root"

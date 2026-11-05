@@ -113,6 +113,10 @@ bool Player_PlayFromBrowser(PlayerState *p, const FileBrowser *fb, int index);
 bool Player_Resume(PlayerState *p, FileBrowser *fb,
                    const char *path, uint32_t ms);
 
+/* Launcher request: play an MP3 from its folder at zero, or browse a folder.
+ * The path is local to the card selected by Storage_Select. */
+bool Player_OpenPath(PlayerState *p, FileBrowser *fb, const char *path);
+
 void Player_TogglePlayPause(PlayerState *p);
 void Player_Stop(PlayerState *p);
 void Player_Next(PlayerState *p);

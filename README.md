@@ -36,8 +36,60 @@ export DEVKITARM=/opt/devkitpro/devkitARM
 make
 ```
 
-Produces `dsxp.nds`. Copy it to your flashcart's SD card along with some
+Produces `dsxp.nds`. Copy it to a flashcart's SD card, or to the internal
+SD card of a DSi using a DSi-mode homebrew launcher, along with some
 audio files anywhere on the card.
+
+### Storage and launching from another menu
+
+DSXP mounts the storage devices supported by libfat, including native DSi
+SD and flashcart DLDI. With no launch argument it prefers a mounted native
+SD card, falling back to DLDI, and opens the card root. Existing saved
+resume behavior is retained: the previous track is offered paused.
+Native SD access requires DSi mode and a launcher that leaves SD access
+available; a DS-mode flashcart uses its DLDI driver instead.
+
+A homebrew menu can pass one track or directory as `argv[1]`:
+
+```
+dsxp.nds sd:/Music/Some Song.mp3
+dsxp.nds fat:/Music/Some Song.mp3
+dsxp.nds /Music
+```
+
+These illustrate the argv values, not a shell command: a filename with
+spaces must arrive as one argument. An MP3 starts immediately at the
+beginning, with its containing folder as the next/previous queue. A
+directory opens the browser there without playing a saved track. Explicit
+launch requests bypass the welcome screen and saved resume position.
+Relative paths are resolved against the launcher's initial working
+directory; `.` and `..` are normalized within the card root. No argument
+means normal interactive startup.
+
+`sd:/` and `fat:/` explicitly select their respective card. If that card
+is unavailable, DSXP reports an error instead of looking for the same
+filename on another card. Root-relative paths such as `/Music` use the
+default card. Preferences and playlists remain on the selected card.
+Missing, unsupported or overlong targets do not autoplay another track;
+the browser remains available. Playlist-file arguments are not supported.
+
+For AKMenu-Next, an `mp3.ini` plugin association can contain:
+
+```ini
+[plugin]
+path=_nds/akmenunext/plugins/apps/dsxp.nds
+argv=1
+bootstrap=0
+```
+
+Place `dsxp.nds` at that configured path. The menu supplies the selected
+MP3's complete path as a single argument.
+
+Emulator note: melonDS 1.1 reports a fixed SD capacity of about 240 MiB
+through CSD, even for larger virtual images. The SDK can reject a FAT
+volume larger than the capacity the emulated card reports. A 128 MiB FAT
+test image avoids that mismatch. A mount error alone therefore does not
+establish that a physical DSi SD card is unsupported.
 
 ### Formats
 
