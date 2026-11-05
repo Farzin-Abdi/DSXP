@@ -5,6 +5,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <strings.h>
 #include <sys/stat.h>
 
 #include "audio.h"
@@ -319,9 +320,9 @@ bool Player_Resume(PlayerState *p, FileBrowser *fb,
      * true tomorrow. */
     char dir[FB_PATH_LEN];
     const char *slash = strrchr(path, '/');
-    if (!slash || slash == path) return false;
+    if (!slash || !slash[1]) return false;
 
-    size_t dirLen = (size_t)(slash - path);
+    size_t dirLen = slash == path ? 1 : (size_t)(slash - path);
     if (dirLen >= sizeof(dir)) return false;
     memcpy(dir, path, dirLen);
     dir[dirLen] = '\0';
@@ -379,6 +380,27 @@ bool Player_Resume(PlayerState *p, FileBrowser *fb,
      * wherever this got to. */
     FileBrowser_Init(scratch, "/");
     return false;
+}
+
+bool Player_OpenPath(PlayerState *p, FileBrowser *fb, const char *path)
+{
+    struct stat st;
+    if (!path || !path[0] || stat(path, &st) != 0) return false;
+
+    if (S_ISDIR(st.st_mode)) {
+        if (!FileBrowser_Init(fb, path)) return false;
+        p->view = VIEW_FILES;
+        return true;
+    }
+    /* Resume already validates the file, rebuilds its folder queue and
+     * preloads silently. A launcher request starts it at zero instead of
+     * offering the previous session's paused position. */
+    const char *ext = strrchr(path, '.');
+    if (!S_ISREG(st.st_mode) || !ext || strcasecmp(ext, ".mp3") != 0 ||
+        !Player_Resume(p, fb, path, 0)) return false;
+    Player_TogglePlayPause(p);
+    p->view = VIEW_NOWPLAYING;
+    return true;
 }
 
 void Player_TogglePlayPause(PlayerState *p)

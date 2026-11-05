@@ -10,5 +10,7 @@
  * wiping itself, and there is no other way to ask for that on a host
  * where the "card" is a directory that is always there. */
 static bool g_fatMountFails = false;
-static inline bool fatInitDefault(void) { return !g_fatMountFails; }
+static int g_fatMountCalls;
+static inline bool fatInitDefault(void)
+{ g_fatMountCalls++; return !g_fatMountFails; }
 #endif

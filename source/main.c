@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <strings.h>   /* strcasecmp, for matching playlist names */
+#include <unistd.h>
 
 #include "audio.h"
 #include "decoder_mp3.h"
@@ -23,6 +24,8 @@
 #include "player.h"
 #include "favourites.h"
 #include "settings.h"
+#include "storage.h"
+#include "launch.h"
 #include "jack.h"
 #include "speaker_pxi.h"   /* SPK_BUS_* for the register watch */
 #include "skin.h"
@@ -3183,7 +3186,7 @@ static bool RequestTwlSpeed(void)
     return (REG_SCFG_CLK & SCFG_CLK_CPU_134MHz) != 0;
 }
 
-int main(void)
+int main(int argc, char **argv)
 {
     defaultExceptionHandler();
 
@@ -3209,6 +3212,25 @@ int main(void)
     InitSubScreen();
     Skin_Init(s_subBackbuf);
 
+    if (!Storage_Init()) {
+        FatalScreen(s_subBackbuf, "Could not mount storage.",
+                    "Check the SD/DLDI device and FAT format.");
+        return 0;
+    }
+
+    const bool hasArgument = argc > 1 && argv && argv[1] && argv[1][0];
+    static char launchPath[FB_PATH_LEN];
+    char launchCwd[FB_PATH_LEN];
+    if (!getcwd(launchCwd, sizeof(launchCwd)))
+        launchCwd[0] = '\0';
+    const bool validArgument = hasArgument &&
+        Launch_ResolvePath(argv[1], launchCwd, launchPath, sizeof(launchPath));
+    if (!Storage_Select(validArgument ? launchPath : NULL)) {
+        FatalScreen(s_subBackbuf, "Requested card unavailable.",
+                    "Check the SD/DLDI device and launcher.");
+        return 0;
+    }
+
     Audio_Init();
 
     /* Decoding moves off the main thread here. Started after the mixer so
@@ -3222,7 +3244,7 @@ int main(void)
     if (!FileBrowser_Init(&fb, "/")) {
         FatalScreen(s_subBackbuf,
                     "Could not mount the card.",
-                    "libfat init failed - check the flashcart.");
+                    "Check the SD/DLDI device and FAT format.");
 
         /* FatalScreen holds the screen until pmMainLoop says the user
          * is leaving, and then returns - it is not noreturn, which it
@@ -3325,8 +3347,16 @@ int main(void)
      * player simply starts idle. On success the browser is left in that
      * track's folder, so the Files tab opens where the listener was
      * rather than back at the root. */
-    if (Player_Resume(&player, &fb, settings.resumePath,
-                      (uint32_t)settings.resumeMs) && fb.cwd[0])
+    bool opened = false;
+    if (hasArgument) {
+        if (validArgument)
+            opened = Player_OpenPath(&player, &fb, Storage_LocalPath(launchPath));
+        /* An invalid explicit request must not start a different saved track. */
+    } else {
+        opened = Player_Resume(&player, &fb, settings.resumePath,
+                               (uint32_t)settings.resumeMs);
+    }
+    if (opened && fb.cwd[0])
         snprintf(s_filesPath, sizeof(s_filesPath), "%s", fb.cwd);
 
     /* ~0.25s before auto-repeat kicks in, then ~20 rows a second. The
@@ -3390,7 +3420,9 @@ int main(void)
      * like every other full-screen page, so opening it here is the whole
      * of the wiring: the loop already knows to hand input to the modal
      * and to repaint underneath it once it closes. */
-    Keyboard_OpenEntry();
+    /* A menu's explicit file/folder request is already an instruction to
+     * enter the app, not a visit to the welcome screen. */
+    if (!hasArgument) Keyboard_OpenEntry();
     UiSnapshot prevSnapshot;
     memset(&prevSnapshot, 0, sizeof(prevSnapshot));
     uint32_t frameCounter = 0;

@@ -20,6 +20,7 @@
 #define NAME_MAX 255
 #endif
 
+#include "storage.c"
 #include "filebrowser.c"
 
 /* filebrowser.c asks this before every card write. Stubbed here so the

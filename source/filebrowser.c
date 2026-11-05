@@ -1,6 +1,7 @@
 #include "filebrowser.h"
 #include "favourites.h"
 #include "settings.h"
+#include "storage.h"
 
 #include <ctype.h>
 #include <dirent.h>
@@ -754,9 +755,7 @@ static bool IsPlaylistFolder(const FileBrowser *fb, const char *name)
  * repoints the browser, which put that failure one tap away. */
 static bool CardMounted(void)
 {
-    static bool mounted = false;
-    if (!mounted) mounted = fatInitDefault();
-    return mounted;
+    return Storage_Init();
 }
 
 /* Brings a card written by an earlier build into the app's folder.

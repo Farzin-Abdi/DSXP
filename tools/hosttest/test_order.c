@@ -110,7 +110,16 @@ int  FileBrowser_VisibleRows(void) { return FB_MAX_VISIBLE_ROWS; }
 void FileBrowser_SetVisibleRows(int r) { (void)r; }
 int  FileBrowser_MarkedCount(const FileBrowser *fb) { (void)fb; return 0; }
 
+/* Map a card-root file to the fixture without writing to the host root. */
+static bool g_rootTrack;
+static int TestPlayerStat(const char *path, struct stat *st)
+{
+    return stat(g_rootTrack && !strcmp(path, "/0.mp3")
+                ? "resume_root/0.mp3" : path, st);
+}
+#define stat(path, st) TestPlayerStat(path, st)
 #include "player.c"
+#undef stat
 
 /* ---- harness --------------------------------------------------------- */
 
@@ -367,6 +376,45 @@ static void TestResume(void)
         snprintf(buf, sizeof(buf), "next opened '%s'", g_opened);
         Check("so next steps through the rest of the album",
               strstr(g_opened, "3.mp3") != NULL, buf);
+    }
+
+    /* A launch argument starts the chosen track, not a saved position. */
+    {
+        FileBrowser fb;
+        Player_Init(&g_p);
+        snprintf(path, sizeof(path), "%s/2.mp3", dir);
+        bool got = Player_OpenPath(&g_p, &fb, path);
+        Check("a launcher track autoplays on Now Playing",
+              got && g_p.hasTrack && g_p.isPlaying && g_p.view == VIEW_NOWPLAYING &&
+              strstr(g_opened, "2.mp3") != NULL, g_opened);
+        Check("a launcher track keeps its album queue", Player_QueueLength() == 4, NULL);
+        Player_Next(&g_p);
+        Check("next works after a filename launch", strstr(g_opened, "3.mp3") != NULL, g_opened);
+
+        Player_Init(&g_p);
+        got = Player_OpenPath(&g_p, &fb, dir);
+        Check("a launcher directory opens without autoplay",
+              got && !g_p.hasTrack && !g_p.isPlaying && g_p.view == VIEW_FILES &&
+              !strcmp(fb.cwd, dir), fb.cwd);
+
+        int opens = g_openCount;
+        Check("a missing argument target opens no track",
+              !Player_OpenPath(&g_p, &fb, "missing-launch.mp3") && g_openCount == opens, NULL);
+        snprintf(path, sizeof(path), "%s/not-a-track.txt", dir);
+        FILE *f = fopen(path, "wb");
+        if (f) { fputc('x', f); fclose(f); }
+        Check("an unsupported argument file opens no track",
+              !Player_OpenPath(&g_p, &fb, path) && g_openCount == opens, NULL);
+        remove(path);
+
+        g_rootTrack = true;
+        snprintf(g_scanDir, sizeof(g_scanDir), "/");
+        Player_Init(&g_p);
+        got = Player_OpenPath(&g_p, &fb, "/0.mp3");
+        Check("an MP3 directly at the card root autoplays",
+              got && g_p.isPlaying && !strcmp(g_opened, "/0.mp3") && !strcmp(fb.cwd, "/"),
+              g_opened);
+        g_rootTrack = false;
     }
 
     g_scanWorks = false;
