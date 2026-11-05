@@ -537,7 +537,7 @@ void Gfx_Frame(int x, int y, int w, int h, uint16_t c)
 }
 
 #ifdef ARM9
-__attribute__((section(".itcm"), long_call, target("arm"), noinline))
+__attribute__((section(".itcm"), long_call, target("arm"), noinline, optimize("Os")))
 #endif
 uint16_t Gfx_Lerp(uint16_t a, uint16_t b, int num, int den)
 {
